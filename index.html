@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>吳清鋒的 BMI 健康計算器</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome 圖示庫 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <!-- Google Fonts - Inter & Noto Sans TC -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+  
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'Noto Sans TC', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#f0fdfa',
+              100: '#ccfbf1',
+              500: '#14b8a6',
+              600: '#0d9488',
+              700: '#0f766e',
+              800: '#115e59',
+              900: '#134e4a',
+              navy: '#0f172a',
+              accent: '#0284c7'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* 自訂過渡動畫與儀表線樣式 */
+    .transition-all-300 {
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    /* 水平漸層軌道 */
+    .gauge-track {
+      background: linear-gradient(to right, 
+        #3b82f6 0%, 
+        #3b82f6 18.5%, 
+        #10b981 18.5%, 
+        #10b981 24%, 
+        #f59e0b 24%, 
+        #f59e0b 27%, 
+        #f97316 27%, 
+        #f97316 30%, 
+        #ef4444 30%, 
+        #ef4444 35%, 
+        #881337 35%, 
+        #881337 100%
+      );
+    }
+
+    /* 指標動畫 */
+    .indicator-pointer {
+      transition: left 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+  </style>
+</head>
+<body class="bg-slate-50 font-sans text-slate-800 min-h-screen flex flex-col justify-between antialiased selection:bg-brand-500 selection:text-white">
+
+  <!-- 頂部頁首導覽 -->
+  <header class="bg-slate-900 text-white shadow-md border-b border-slate-800 sticky top-0 z-50">
+    <div class="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-teal-500 to-cyan-500 flex items-center justify-center text-white font-bold text-xl shadow-inner">
+          <i class="fa-solid fa-heart-pulse"></i>
+        </div>
+        <div>
+          <h1 class="text-xl font-bold tracking-tight">吳清鋒的 BMI 健康計算器</h1>
+          <p class="text-xs text-slate-400">衛生福利部標準 ‧ 精準健康數據評估</p>
+        </div>
+      </div>
+      <div class="hidden sm:flex items-center space-x-2 text-xs bg-slate-800/80 px-3 py-1.5 rounded-full border border-slate-700 text-slate-300">
+        <i class="fa-solid fa-user-check text-teal-400"></i>
+        <span>個人專屬版</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- 主要內容區 -->
+  <main class="max-w-5xl mx-auto px-4 py-8 w-full flex-grow">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      
+      <!-- 左側：輸入表單與儀表評估 -->
+      <section class="lg:col-span-7 space-y-6">
+        
+        <!-- 輸入卡片 -->
+        <div class="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-slate-200/80 hover:shadow-md transition-shadow">
+          <h2 class="text-lg font-bold text-slate-900 mb-5 flex items-center gap-2 border-b border-slate-100 pb-3">
+            <i class="fa-solid fa-sliders text-teal-600"></i> 輸入身體生理數據
+          </h2>
+
+          <form id="bmiForm" onsubmit="event.preventDefault(); calculateBMI();" class="space-y-5">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <!-- 身高輸入 -->
+              <div>
+                <label for="height" class="block text-sm font-semibold text-slate-700 mb-2">
+                  身高 <span class="text-xs font-normal text-slate-500">(公分 cm)</span>
+                </label>
+                <div class="relative">
+                  <input 
+                    type="number" 
+                    id="height" 
+                    placeholder="例如: 175" 
+                    step="0.1"
+                    min="50" 
+                    max="250"
+                    required
+                    class="w-full pl-4 pr-12 py-3 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none transition-all font-medium text-slate-800 placeholder-slate-400"
+                  />
+                  <span class="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate-400 pointer-events-none">cm</span>
+                </div>
+              </div>
+
+              <!-- 體重輸入 -->
+              <div>
+                <label for="weight" class="block text-sm font-semibold text-slate-700 mb-2">
+                  體重 <span class="text-xs font-normal text-slate-500">(公斤 kg)</span>
+                </label>
+                <div class="relative">
+                  <input 
+                    type="number" 
+                    id="weight" 
+                    placeholder="例如: 68" 
+                    step="0.1"
+                    min="20" 
+                    max="300"
+                    required
+                    class="w-full pl-4 pr-12 py-3 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none transition-all font-medium text-slate-800 placeholder-slate-400"
+                  />
+                  <span class="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate-400 pointer-events-none">kg</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 操作按鈕群 -->
+            <div class="flex gap-3 pt-2">
+              <button 
+                type="submit" 
+                class="flex-1 bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 text-white font-bold py-3.5 px-6 rounded-xl shadow-lg shadow-teal-600/20 active:scale-[0.99] transition-all flex items-center justify-center gap-2"
+              >
+                <i class="fa-solid fa-calculator"></i> 計算 BMI
+              </button>
+              <button 
+                type="button" 
+                onclick="resetForm()"
+                class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold py-3.5 px-5 rounded-xl transition-all active:scale-[0.98]"
+                title="重置"
+              >
+                <i class="fa-solid fa-rotate-left"></i>
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- 視覺化結果卡片 (初始狀態隱藏) -->
+        <div id="resultCard" class="hidden bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-slate-200/80 space-y-6 animate-fade-in">
+          <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+            <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+              <i class="fa-solid fa-chart-pie text-teal-600"></i> 計算分析結果
+            </h3>
+            <span id="statusBadge" class="px-3 py-1 rounded-full text-xs font-bold transition-all">
+              --
+            </span>
+          </div>
+
+          <!-- BMI 數值大型展示區 -->
+          <div class="flex flex-col sm:flex-row items-center justify-around bg-slate-50 rounded-xl p-6 border border-slate-100 gap-4 text-center sm:text-left">
+            <div>
+              <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">您的計算數值 (BMI)</p>
+              <div class="flex items-baseline gap-2 justify-center sm:justify-start">
+                <span id="bmiValue" class="text-5xl font-extrabold text-slate-800 tracking-tight">0.0</span>
+                <span class="text-slate-500 font-semibold text-sm">kg/m²</span>
+              </div>
+            </div>
+            <div class="sm:border-l sm:border-slate-200 sm:pl-6 space-y-1">
+              <p class="text-xs text-slate-500">標準理想體重區間</p>
+              <p id="idealWeightRange" class="text-sm font-bold text-slate-700">-- kg</p>
+            </div>
+          </div>
+
+          <!-- 視覺儀表軸線 -->
+          <div class="space-y-2 pt-2">
+            <div class="flex justify-between items-center text-xs text-slate-500 font-medium">
+              <span>BMI 視覺化分布軸</span>
+              <span id="bmiCategoryDetail" class="text-slate-700 font-bold"></span>
+            </div>
+            
+            <!-- 軸線條 -->
+            <div class="relative w-full h-4 rounded-full gauge-track shadow-inner my-6">
+              <!-- 指標號誌 -->
+              <div id="indicator" class="indicator-pointer absolute top-1/2 -translate-y-1/2 -ml-2.5 left-[0%] flex flex-col items-center">
+                <div class="w-5 h-5 bg-slate-900 border-2 border-white rounded-full shadow-md"></div>
+                <div class="w-0.5 h-3 bg-slate-900"></div>
+              </div>
+            </div>
+
+            <!-- 標籤比例說明 -->
+            <div class="grid grid-cols-6 gap-1 text-[10px] sm:text-xs text-center text-slate-500 font-medium pt-1">
+              <div class="border-t-2 border-blue-500 pt-1">過輕<br/>&lt;18.5</div>
+              <div class="border-t-2 border-emerald-500 pt-1 font-bold text-emerald-700">正常<br/>18.5-23.9</div>
+              <div class="border-t-2 border-amber-500 pt-1">過重<br/>24-26.9</div>
+              <div class="border-t-2 border-orange-500 pt-1">輕度<br/>27-29.9</div>
+              <div class="border-t-2 border-red-500 pt-1">中度<br/>30-34.9</div>
+              <div class="border-t-2 border-rose-900 pt-1">重度<br/>&ge;35</div>
+            </div>
+          </div>
+
+          <!-- 飲食與運動溫馨建議區塊 -->
+          <div id="adviceBox" class="rounded-xl p-5 border text-sm leading-relaxed flex gap-4 items-start transition-all">
+            <div id="adviceIcon" class="text-2xl pt-0.5 shrink-0"></div>
+            <div class="space-y-1">
+              <h4 id="adviceTitle" class="font-bold text-base">---</h4>
+              <p id="adviceText" class="text-slate-600">---</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 右側：歷史紀錄與衛生福利部標準資訊 -->
+      <section class="lg:col-span-5 space-y-6">
+        
+        <!-- 歷史紀錄面板 -->
+        <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200/80 flex flex-col h-full">
+          <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
+            <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+              <i class="fa-solid fa-clock-rotate-left text-teal-600"></i> 歷史計算紀錄
+            </h3>
+            <button 
+              onclick="clearHistory()" 
+              class="text-xs text-slate-400 hover:text-red-500 transition-colors flex items-center gap-1 py-1 px-2 rounded-lg hover:bg-red-50"
+              title="清除所有紀錄"
+            >
+              <i class="fa-solid fa-trash-can"></i> 清除紀錄
+            </button>
+          </div>
+
+          <!-- 紀錄列表內容區 -->
+          <div id="historyList" class="space-y-3 max-h-[380px] overflow-y-auto pr-1">
+            <!-- 無資料時顯示 -->
+            <div id="emptyHistory" class="text-center py-10 text-slate-400 text-sm">
+              <i class="fa-solid fa-box-open text-3xl mb-2 text-slate-300 block"></i>
+              尚無測量紀錄，請於左側輸入數據計算。
+            </div>
+          </div>
+        </div>
+
+        <!-- 衛福部對照標準說明卡 -->
+        <div class="bg-gradient-to-br from-slate-900 to-slate-800 text-slate-300 rounded-2xl p-6 shadow-md border border-slate-700/50 space-y-3">
+          <h4 class="text-white font-bold text-sm flex items-center gap-2">
+            <i class="fa-solid fa-circle-info text-teal-400"></i> 衛生福利部 BMI 判讀標準
+          </h4>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            18 歲以上成人之 Body Mass Index (BMI) 衛生福利部定義之標準如下：
+          </p>
+          <ul class="text-xs space-y-1.5 pt-1">
+            <li class="flex justify-between items-center py-1 border-b border-slate-800">
+              <span class="text-blue-400 font-medium">體重過輕</span>
+              <span class="font-mono">BMI &lt; 18.5</span>
+            </li>
+            <li class="flex justify-between items-center py-1 border-b border-slate-800">
+              <span class="text-emerald-400 font-medium">健康正常範圍</span>
+              <span class="font-mono">18.5 &le; BMI &lt; 24</span>
+            </li>
+            <li class="flex justify-between items-center py-1 border-b border-slate-800">
+              <span class="text-amber-400 font-medium">體重過重</span>
+              <span class="font-mono">24 &le; BMI &lt; 27</span>
+            </li>
+            <li class="flex justify-between items-center py-1 border-b border-slate-800">
+              <span class="text-orange-400 font-medium">輕度肥胖</span>
+              <span class="font-mono">27 &le; BMI &lt; 30</span>
+            </li>
+            <li class="flex justify-between items-center py-1 border-b border-slate-800">
+              <span class="text-red-400 font-medium">中度肥胖</span>
+              <span class="font-mono">30 &le; BMI &lt; 35</span>
+            </li>
+            <li class="flex justify-between items-center py-1">
+              <span class="text-rose-400 font-medium">重度肥胖</span>
+              <span class="font-mono">BMI &ge; 35</span>
+            </li>
+          </ul>
+        </div>
+
+      </section>
+
+    </div>
+  </main>
+
+  <!-- 頁尾聲明 -->
+  <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-500 mt-12">
+    <div class="max-w-5xl mx-auto px-4">
+      <p>吳清鋒 BMI 健康計算器 &copy; 2026. 數據僅供健康管理評估參考，專業醫療建議請諮詢醫師或營養師。</p>
+    </div>
+  </footer>
+
+  <!-- JavaScript 邏輯控制 -->
+  <script>
+    // 網頁載入時初始化
+    document.addEventListener('DOMContentLoaded', () => {
+      renderHistory();
+    });
+
+    // 計算 BMI 主邏輯
+    function calculateBMI() {
+      const heightInput = document.getElementById('height');
+      const weightInput = document.getElementById('weight');
+      
+      const heightCm = parseFloat(heightInput.value);
+      const weightKg = parseFloat(weightInput.value);
+
+      if (!heightCm || !weightKg || heightCm <= 0 || weightKg <= 0) {
+        showToast('請輸入有效的身高與體重數值！');
+        return;
+      }
+
+      // BMI 公式 = 體重(kg) / (身高(m) * 身高(m))
+      const heightM = heightCm / 100;
+      const bmi = weightKg / (heightM * heightM);
+      const roundedBMI = Math.round(bmi * 10) / 10;
+
+      // 理想體重計算 (以 BMI 18.5 ~ 23.9 為健康基準)
+      const minIdealWeight = (18.5 * heightM * heightM).toFixed(1);
+      const maxIdealWeight = (23.9 * heightM * heightM).toFixed(1);
+
+      // 取得狀態資訊
+      const statusInfo = getBMIStatus(roundedBMI);
+
+      // 更新結果 UI
+      displayResult(roundedBMI, minIdealWeight, maxIdealWeight, statusInfo);
+
+      // 儲存至 LocalStorage
+      saveToHistory({
+        id: Date.now(),
+        date: new Date().toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }),
+        height: heightCm,
+        weight: weightKg,
+        bmi: roundedBMI,
+        status: statusInfo.name,
+        badgeClass: statusInfo.badgeClass
+      });
+    }
+
+    // 依據衛生福利部標準判讀狀態
+    function getBMIStatus(bmi) {
+      if (bmi < 18.5) {
+        return {
+          name: '體重過輕',
+          color: 'blue',
+          badgeClass: 'bg-blue-100 text-blue-700 border border-blue-200',
+          adviceBoxClass: 'bg-blue-50 border-blue-200 text-blue-900',
+          icon: '<i class="fa-solid fa-cloud-sun text-blue-500"></i>',
+          title: '溫馨建議：適度補充營養與熱量',
+          text: '您的體重偏輕，建議適度增加蛋白質與優質碳水化合物的攝取，搭配肌肉力量訓練，打造健康結實體態。',
+          gaugePercent: Math.min(Math.max((bmi / 18.5) * 18.5, 5), 18)
+        };
+      } else if (bmi >= 18.5 && bmi < 24) {
+        return {
+          name: '健康正常',
+          color: 'emerald',
+          badgeClass: 'bg-emerald-100 text-emerald-700 border border-emerald-200',
+          adviceBoxClass: 'bg-emerald-50 border-emerald-200 text-emerald-900',
+          icon: '<i class="fa-solid fa-circle-check text-emerald-500"></i>',
+          title: '太棒了！請繼續保持健康生活習慣',
+          text: '您的體重處於非常理想的健康範圍！請維持均衡飲食與規律運動習慣，持續為身體注入滿滿活力。',
+          gaugePercent: 18.5 + ((bmi - 18.5) / (24 - 18.5)) * (24 - 18.5)
+        };
+      } else if (bmi >= 24 && bmi < 27) {
+        return {
+          name: '體重過重',
+          color: 'amber',
+          badgeClass: 'bg-amber-100 text-amber-700 border border-amber-200',
+          adviceBoxClass: 'bg-amber-50 border-amber-200 text-amber-900',
+          icon: '<i class="fa-solid fa-triangle-exclamation text-amber-500"></i>',
+          title: '溫馨建議：注意飲食份量與運動',
+          text: '您的體重稍微高於標準值。建議減少精緻糖分與高油飲食攝取，每週進行至少 150 分鐘的中強度有氧運動。',
+          gaugePercent: 24 + ((bmi - 24) / (27 - 24)) * (27 - 24)
+        };
+      } else if (bmi >= 27 && bmi < 30) {
+        return {
+          name: '輕度肥胖',
+          color: 'orange',
+          badgeClass: 'bg-orange-100 text-orange-700 border border-orange-200',
+          adviceBoxClass: 'bg-orange-50 border-orange-200 text-orange-900',
+          icon: '<i class="fa-solid fa-triangle-exclamation text-orange-500"></i>',
+          title: '健康警訊：開始進行體重管理',
+          text: '體重已進入輕度肥胖範圍。建議控制總熱量攝取，多吃蔬菜與高纖食物，並積極建立規律的體能鍛鍊計畫。',
+          gaugePercent: 27 + ((bmi - 27) / (30 - 27)) * (30 - 27)
+        };
+      } else if (bmi >= 30 && bmi < 35) {
+        return {
+          name: '中度肥胖',
+          color: 'red',
+          badgeClass: 'bg-red-100 text-red-700 border border-red-200',
+          adviceBoxClass: 'bg-red-50 border-red-200 text-red-900',
+          icon: '<i class="fa-solid fa-heart-crack text-red-500"></i>',
+          title: '健康警訊：著手進行減重行動',
+          text: '體重可能會增加心血管疾病與代謝症候群的風險。建議尋求營養師或專業醫師協助，擬定科學減重指引。',
+          gaugePercent: 30 + ((bmi - 30) / (35 - 30)) * (35 - 30)
+        };
+      } else {
+        return {
+          name: '重度肥胖',
+          color: 'rose',
+          badgeClass: 'bg-rose-900 text-white border border-rose-950',
+          adviceBoxClass: 'bg-rose-50 border-rose-200 text-rose-950',
+          icon: '<i class="fa-solid fa-kit-medical text-rose-600"></i>',
+          title: '醫療建議：建議諮詢專業醫療團隊',
+          text: '重度肥胖對身體健康的負擔較高。強力建議尋求門診醫療與飲食管理專業支援，系統性維護整體健康。',
+          gaugePercent: Math.min(35 + ((bmi - 35) / 15) * 65, 95)
+        };
+      }
+    }
+
+    // 更新畫面顯示結果
+    function displayResult(bmi, minW, maxW, status) {
+      const resultCard = document.getElementById('resultCard');
+      const bmiValue = document.getElementById('bmiValue');
+      const statusBadge = document.getElementById('statusBadge');
+      const idealWeightRange = document.getElementById('idealWeightRange');
+      const bmiCategoryDetail = document.getElementById('bmiCategoryDetail');
+      const indicator = document.getElementById('indicator');
+      const adviceBox = document.getElementById('adviceBox');
+      const adviceIcon = document.getElementById('adviceIcon');
+      const adviceTitle = document.getElementById('adviceTitle');
+      const adviceText = document.getElementById('adviceText');
+
+      // 顯現卡片
+      resultCard.classList.remove('hidden');
+
+      // 數值填入
+      bmiValue.innerText = bmi.toFixed(1);
+      idealWeightRange.innerText = `${minW} ~ ${maxW} kg`;
+      bmiCategoryDetail.innerText = `評估結果：${status.name}`;
+
+      // 標籤樣式
+      statusBadge.innerText = status.name;
+      statusBadge.className = `px-3 py-1 rounded-full text-xs font-bold transition-all ${status.badgeClass}`;
+
+      // 軸線指標定位 (%計算)
+      // 將 BMI 數值映射到 0% - 100% 軸線
+      let percent = 0;
+      if (bmi < 18.5) {
+        percent = (bmi / 18.5) * 18.5;
+      } else if (bmi < 24) {
+        percent = 18.5 + ((bmi - 18.5) / (24 - 18.5)) * 5.5;
+      } else if (bmi < 27) {
+        percent = 24 + ((bmi - 24) / (27 - 24)) * 3;
+      } else if (bmi < 30) {
+        percent = 27 + ((bmi - 27) / (30 - 27)) * 3;
+      } else if (bmi < 35) {
+        percent = 30 + ((bmi - 30) / (35 - 30)) * 5;
+      } else {
+        percent = 35 + Math.min(((bmi - 35) / 10) * 65, 65);
+      }
+      percent = Math.max(2, Math.min(percent, 98)); // 邊界限制
+      indicator.style.left = `${percent}%`;
+
+      // 建議區塊內容更新
+      adviceBox.className = `rounded-xl p-5 border text-sm leading-relaxed flex gap-4 items-start transition-all ${status.adviceBoxClass}`;
+      adviceIcon.innerHTML = status.icon;
+      adviceTitle.innerText = status.title;
+      adviceText.innerText = status.text;
+
+      // 滾動滑至結果區域 (行動端優化)
+      resultCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    // 重置表單
+    function resetForm() {
+      document.getElementById('bmiForm').reset();
+      document.getElementById('resultCard').classList.add('hidden');
+    }
+
+    // LocalStorage 紀錄維護
+    const STORAGE_KEY = 'wu_qingfeng_bmi_history';
+
+    function getHistory() {
+      const data = localStorage.getItem(STORAGE_KEY);
+      return data ? JSON.parse(data) : [];
+    }
+
+    function saveToHistory(item) {
+      let history = getHistory();
+      // 新紀錄置頂
+      history.unshift(item);
+      // 只保留最近 15 筆
+      if (history.length > 15) {
+        history = history.slice(0, 15);
+      }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+      renderHistory();
+    }
+
+    function clearHistory() {
+      const history = getHistory();
+      if (history.length === 0) return;
+
+      localStorage.removeItem(STORAGE_KEY);
+      renderHistory();
+      showToast('已清除所有歷史紀錄！');
+    }
+
+    function deleteHistoryItem(id) {
+      let history = getHistory();
+      history = history.filter(item => item.id !== id);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+      renderHistory();
+    }
+
+    // 繪製歷史紀錄列表
+    function renderHistory() {
+      const historyList = document.getElementById('historyList');
+      const emptyHistory = document.getElementById('emptyHistory');
+      const history = getHistory();
+
+      if (history.length === 0) {
+        historyList.innerHTML = `
+          <div id="emptyHistory" class="text-center py-10 text-slate-400 text-sm">
+            <i class="fa-solid fa-box-open text-3xl mb-2 text-slate-300 block"></i>
+            尚無測量紀錄，請於左側輸入數據計算。
+          </div>
+        `;
+        return;
+      }
+
+      historyList.innerHTML = history.map(item => `
+        <div class="flex items-center justify-between p-3.5 bg-slate-50 hover:bg-slate-100/80 rounded-xl border border-slate-200/60 transition-all text-xs">
+          <div class="space-y-1">
+            <div class="flex items-center gap-2">
+              <span class="font-bold text-sm text-slate-800">BMI ${item.bmi.toFixed(1)}</span>
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${item.badgeClass}">
+                ${item.status}
+              </span>
+            </div>
+            <p class="text-slate-500 font-medium">
+              ${item.height} cm / ${item.weight} kg
+            </p>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="text-slate-400 text-[11px]">${item.date}</span>
+            <button 
+              onclick="deleteHistoryItem(${item.id})" 
+              class="text-slate-400 hover:text-red-500 p-1 transition-colors" 
+              title="刪除此筆"
+            >
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // 簡易 Toast 提示訊息
+    function showToast(message) {
+      const toast = document.createElement('div');
+      toast.className = 'fixed bottom-5 right-5 bg-slate-900 text-white text-xs px-4 py-3 rounded-xl shadow-xl z-50 flex items-center gap-2 animate-bounce';
+      toast.innerHTML = `<i class="fa-solid fa-circle-info text-teal-400"></i> ${message}`;
+      document.body.appendChild(toast);
+      setTimeout(() => {
+        toast.remove();
+      }, 2500);
+    }
+  </script>
+</body>
+</html>
